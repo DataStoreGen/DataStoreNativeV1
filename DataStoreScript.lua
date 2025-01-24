@@ -1,7 +1,8 @@
 local Players = game:GetService('Players')
-local DataStore = require(script.Parent.DataStore)
+local SSS = script.Parent
+local Module = SSS:FindFirstChild('Module')
+local DataStore = require(Module:FIndFirstChild('DataStore'))
 local PlayersDataStore = DataStore.new({Name = 'PlayerData1', CacheEnabled = true, LockTTL = 30})
-local PlayersData = require(script.Parent.PlayersData)
 
 function createStats(player: Player)
 	local key = DataStore.SetKey(player)

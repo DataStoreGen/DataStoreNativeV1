@@ -1,4 +1,4 @@
-local DataStore = require(script.DataStoreModule)
+local DataStore = require(script.Parent.DataStoreModule)
 local SessionStore = require(script.Parent.SessionStore)
 local RunService = game:GetService('RunService')
 local DataStoreModule = {}
