@@ -4,7 +4,7 @@ local DataStore = game:GetService('DataStoreService')
 local HttpService = game:GetService('HttpService')
 local RunService = game:GetService('RunService')
 
-local PlayersData = require(script.Parent.Parent.PlayersData)
+local PlayersData = require(script.Parent.PlayersData)
 
 local eventListen = {}
 local asyncQueue = {}
