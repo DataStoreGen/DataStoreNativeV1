@@ -1,3 +1,4 @@
+local ModuleCleaner = require(script.Parent:FindFirstChild('ModuleCleaner')).new()
 local DataStore = require(script.Parent.DataStoreModule)
 local SessionStore = require(script.Parent.SessionStore)
 local RunService = game:GetService('RunService')
@@ -89,6 +90,7 @@ end
 function DataStoreModule.GetSessionData(key): DataStore.UserData
 	local session = DataStore.GetSessionFromStore(key, SessionStore)
 	if not session then return end
+	ModuleCleaner:RegisterTable('SessionData', session)
 	return session
 end
 
@@ -140,10 +142,10 @@ end
 
 function DataStoreModule:AutoSaveSet(Players: Players)
 	task.spawn(function()
-		while task.wait(math.random(15, 30)) do
+		while task.wait(math.random(180, 300)) do
 			for _, players in pairs(Players:GetPlayers()) do
 				local key = 'Player_' .. players.UserId
-				local success, err = pcall(self.SetAsync, self, key, false)
+				local success, err = pcall(self.OnLeaveSet, self, key)
 				if not success then
 					warn('Failed to auto save', err)
 				else
@@ -155,10 +157,10 @@ function DataStoreModule:AutoSaveSet(Players: Players)
 end
 
 function DataStoreModule:AutoSaveUpdate(Players: Players)
-	while task.wait(math.random(15, 30)) do
+	while task.wait(math.random(180, 300)) do
 		for _, players in pairs(Players:GetPlayers()) do
 			local key = 'Player_' .. players.UserId
-			local success, err = pcall(self.UpdateAsync, self, key, false)
+			local success, err = pcall(self.OnLeaveUpdate, self, key)
 			if not success then
 				warn('Failed to auto save', err)
 			else
@@ -167,5 +169,23 @@ function DataStoreModule:AutoSaveUpdate(Players: Players)
 		end
 	end
 end
+
+function DataStoreModule.CreateFolder(folderName: string, parent: any): Instance
+	local folder = Instance.new('Folder')
+	folder.Name = folderName
+	folder.Parent = parent
+	return folder
+end
+
+type valueType = 'NumberValue'|'StringValue'|'BoolValue'|'IntValue'
+
+function DataStoreModule.CreateValue(valueIns: valueType, valueName: string, valueParent: any): Instance
+	local value = Instance.new(valueIns)
+	value.Name = valueName
+	value.Parent = valueParent
+	return value
+end
+
+ModuleCleaner:RegisterTable('DataStore', DataStoreModule)
 
 return DataStoreModule
