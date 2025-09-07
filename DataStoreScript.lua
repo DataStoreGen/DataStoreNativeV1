@@ -6,14 +6,10 @@ local PlayersDataStore = DataStore.new({Name = 'PlayerData1', CacheEnabled = tru
 
 function createStats(player: Player)
 	local key = DataStore.SetKey(player)
-	local ls = Instance.new('Folder')
-	ls.Name = 'leaderstats'
-	local PlusData = Instance.new('Folder')
-	PlusData.Name = 'PlusData'
-	local Clicks = Instance.new('NumberValue')
-	Clicks.Name = 'Clicks'
-	local ClickPlus = Instance.new('NumberValue')
-	ClickPlus.Name = 'ClickPlus'
+	local ls = DataStore.CreateFolder('leaderstats', player)
+	local PlusData = DataStore.CreateFolder('PlusData', player)
+	local Clicks = DataStore.CreateValue('NumberValue', 'Clicks', ls)
+	local ClickPlus = DataStore.CreateValue('NumberValue', 'ClickPlus', PlusData)
 	local oldData = PlayersDataStore:GetAsync(key, player)
 	if oldData then
 		Clicks.Value = oldData.Clicks

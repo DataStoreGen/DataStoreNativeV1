@@ -170,7 +170,12 @@ function DataStoreModule:AutoSaveUpdate(Players: Players)
 	end
 end
 
-function DataStoreModule.CreateFolder(folderName: string, parent: any): Instance
+export type Folder = {
+	Name: string,
+	Parent: any?,
+}
+
+function DataStoreModule.CreateFolder(folderName: string, parent: any): Folder
 	local folder = Instance.new('Folder')
 	folder.Name = folderName
 	folder.Parent = parent
@@ -178,8 +183,13 @@ function DataStoreModule.CreateFolder(folderName: string, parent: any): Instance
 end
 
 type valueType = 'NumberValue'|'StringValue'|'BoolValue'|'IntValue'
+export type Value = {
+	Name: string,
+	Value: number|string|boolean,
+	Parent: Instance?
+}
 
-function DataStoreModule.CreateValue(valueIns: valueType, valueName: string, valueParent: any): Instance
+function DataStoreModule.CreateValue(valueIns: valueType, valueName: string, valueParent: any): Value
 	local value = Instance.new(valueIns)
 	value.Name = valueName
 	value.Parent = valueParent

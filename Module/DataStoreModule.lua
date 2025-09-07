@@ -1,4 +1,6 @@
 --!strict
+local ModuleCleaner = require(script.Parent:FindFirstChild('ModuleCleaner'))
+local Cleaner = ModuleCleaner.new()
 
 local DataStore = game:GetService('DataStoreService')
 local HttpService = game:GetService('HttpService')
@@ -44,6 +46,18 @@ function dispatchEvent(event, ...)
 	end
 end
 
+function retryAsync(func)
+	local retries = 0
+	while retries < config.max do
+		local success, result = pcall(func)
+		if success then return result else
+			retries += 1
+			logMessage('Warn', string.format('Retrying ... (%d/%d) %s',  retries, config.max, result))
+		end
+	end
+	error(string.format("Failed after %d retries", config.max))
+end
+
 local function processQueue()
 	while true do
 		if #asyncQueue > 0 then
@@ -62,18 +76,6 @@ local function processQueue()
 		end
 		task.wait(0.1)
 	end
-end
-
-function retryAsync(func)
-	local retries = 0
-	while retries < config.max do
-		local success, result = pcall(func)
-		if success then return result else
-			retries += 1
-			logMessage('Warn', string.format('Retrying ... (%d/%d) %s',  retries, config.max, result))
-		end
-	end
-	error(string.format("Failed after %d retries", config.max))
 end
 
 coroutine.wrap(processQueue)()
@@ -117,15 +119,7 @@ function DataStoreMod.new(config: Config): DataStoreModule
 	self.Cache = {} :: {[string]: {Value: any, Expiration: number}}	
 	self.SessionId = HttpService:GenerateGUID(false)
 	self.CloneTemplate = function(originalData: {[string]: any}): {[string]: any}
-		local clone = {}
-		for key, info in pairs(originalData) do
-			if typeof(info) == 'table' then
-				clone[key] = self.CloneTemplate(info)
-			else
-				clone[key] = info
-			end
-		end
-		return clone
+		return ModuleCleaner.CloneTemplate(originalData)
 	end
 	self.PlayersData = PlayersData
 	return self
@@ -163,6 +157,7 @@ function DataStoreMod:IsLocked(key: string): boolean
 	local success, result = pcall(function()
 		return self.DataStore:GetAsync(lockKey)
 	end)
+	result = Cleaner:RegisterTable('GetAsync', result)
 	if success and result then
 		return result.Expiration > os.time()
 	else
@@ -182,10 +177,10 @@ function DataStoreMod:AcquireLock(key: string, player: Player): (boolean, string
 				end
 				return nil
 			else
-				return {
+				return Cleaner:RegisterTable('SessionLock',{
 					SessionId = self.SessionId,
 					Expiration = os.time() + self.LockTTL
-				}
+				})
 			end
 		end)
 	end)
@@ -267,7 +262,7 @@ function DataStoreMod:UpdateAsync(key, callBack: (oldData: any?)-> any, canBind:
 	end
 end
 
-function DataStoreMod:GetAsync(key: string): PlayersData.PlayerData
+function DataStoreMod:GetAsync(key: string): PlayersData.PlayerData?
 	assert(key ~= '', `key can't be empty`)
 	local success, result = pcall(function()
 		return retryAsync(function()
@@ -286,31 +281,33 @@ function DataStoreMod:GetAsync(key: string): PlayersData.PlayerData
 end
 
 function DataStoreMod:MergeToCurrent(data)
-	for key, value in pairs(PlayersData) do
-		if type(value) == 'table' then
-			data[key] = data[key] or {}
-			for k, v in pairs(value) do
-				data[key][k] = data[key][k] or v
+	local function recursiveMerge(template, target)
+		for key, value in pairs(template) do
+			if type(value) == 'table' then
+				target[key] = target[key] or {}
+				recursiveMerge(value, target[key])
+			else
+				if target[key] == nil then
+					target[key] = value
+				end
 			end
-		else
-			data[key] = data[key] or value
 		end
 	end
+	recursiveMerge(PlayersData, data)
 	return data
 end
 
-function DataStoreMod:CleanData(Data)
-	for info, data in pairs(Data) do
-		if type(data) == 'table' then
-			for k, _ in pairs(Data) do
-				if not (PlayersData[info] and PlayersData[info][k]) then
-					data[k] = nil
-				end
+function DataStoreMod:CleanData(data)
+	local function recursiveClean(template, target)
+		for key in pairs(target) do
+			if template[key] == nil then
+				target[key] = nil
+			elseif type(template[key]) == 'table' and type(target[key]) == 'table' then
+				recursiveClean(template[key], target[key])
 			end
-		elseif not PlayersData[info] then
-			Data[info] = nil
 		end
 	end
+	recursiveClean(PlayersData, data)
 end
 
 function DataStoreMod.GetSessionFromStore(key, self)
@@ -321,5 +318,7 @@ end
 function DataStoreMod.GetPlayersData(): PlayersData.PlayerData
 	return PlayersData
 end
+
+Cleaner:RegisterTable('DataStoreModule', DataStoreMod)
 
 return DataStoreMod
